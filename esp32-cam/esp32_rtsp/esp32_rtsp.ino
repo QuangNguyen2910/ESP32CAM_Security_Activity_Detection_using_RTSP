@@ -7,12 +7,16 @@
 #include "wifi_config.h"
 
 OV2640 cam;
+const int lightPin = 4;  // Pin connected to the light
 
 WiFiServer rtspServer(5005);
+WebServer webServer(80);  // Create a web server on port 80
 
 void setup()
 {
   Serial.begin(115200);
+  pinMode(lightPin, OUTPUT);
+  digitalWrite(lightPin, LOW);  // Keep the light off initially
   Serial.setDebugOutput(true);
   Serial.println();
 
@@ -43,6 +47,16 @@ void setup()
 
   WiFi.setTxPower(WIFI_POWER_19_5dBm);  // Set maximum WiFi transmission power
   rtspServer.begin();
+
+  // Set up a handler for the "/trigger_light" URL
+  webServer.on("/trigger_light", []() {
+    digitalWrite(lightPin, HIGH);  // Turn on the light
+    delay(500);                    // Keep it on for 500ms
+    digitalWrite(lightPin, LOW);    // Turn off the light
+    webServer.send(200, "text/plain", "Light activated");
+  });
+
+  webServer.begin();  // Start the web server
 }
 
 CStreamer *streamer;
@@ -53,6 +67,7 @@ void loop()
 {
   uint32_t msecPerFrame = 400; // Adjust frame rate to 2.5 FPS
   static uint32_t lastimage = millis();
+  webServer.handleClient();  // Process web server requests
 
   // If we have an active client connection, just service that until gone
   // (FIXME - support multiple simultaneous clients)
