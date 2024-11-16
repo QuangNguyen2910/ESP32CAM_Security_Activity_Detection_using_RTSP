@@ -8,7 +8,6 @@ from ultralytics import YOLO
 import io
 import time
 import onnxruntime as ort
-import detect_utils
 import torch
 import os
 from PIL import Image
