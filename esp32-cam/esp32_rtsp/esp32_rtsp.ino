@@ -4,10 +4,13 @@
 #include "OV2640.h"
 #include "OV2640Streamer.h"
 #include "CRtspSession.h"
-#include "wifi_config.h"
 
 OV2640 cam;
 const int lightPin = 4;  // Pin connected to the light
+// const char* ssid = "IEC Server";
+// const char* password = "IEC@2024";
+const char* ssid = "Interdimensional_Wifi";
+const char* password = "0974603489";
 
 WiFiServer rtspServer(5005);
 WebServer webServer(80);  // Create a web server on port 80
