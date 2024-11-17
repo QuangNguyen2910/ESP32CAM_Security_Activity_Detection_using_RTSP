@@ -5,110 +5,88 @@
 #include "OV2640Streamer.h"
 #include "CRtspSession.h"
 
-OV2640 cam;
-const int lightPin = 4;  // Pin connected to the light
+
 // const char* ssid = "IEC Server";
 // const char* password = "IEC@2024";
 const char* ssid = "Interdimensional_Wifi";
 const char* password = "0974603489";
 
-WiFiServer rtspServer(5005);
-WebServer webServer(80);  // Create a web server on port 80
+WiFiServer rtspServer(5005); // Tạo rstp server tại port 80
+WebServer webServer(80);  // Tạo web server tại port 80
 
-void setup()
-{
+OV2640 cam;
+const int lightPin = 4; 
+
+CStreamer *streamer; // Đối tượng phát video qua RTSP
+CRtspSession *session; // Quản lý phiên RTSP
+WiFiClient client; // Xử lý kết nối giữa client với RTSP server
+
+
+void setup() {
   Serial.begin(115200);
   pinMode(lightPin, OUTPUT);
-  digitalWrite(lightPin, LOW);  // Keep the light off initially
+  digitalWrite(lightPin, LOW);  // Ban đầu đèn sẽ tắt
   Serial.setDebugOutput(true);
   Serial.println();
-
-  // WiFi.config(ip, gatway, subnet);
-
-  // attempt to connect to Wifi network:
-  while (WiFi.status() != WL_CONNECTED)
-  {
+  // Kết nối WIFI
+  while (WiFi.status() != WL_CONNECTED) {
     Serial.print("Attempting to connect to SSID: ");
     Serial.println(ssid);
-    // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
     WiFi.begin(ssid, password);
-
-    // wait 10 seconds for connection:
-    delay(10000);
+    delay(10000); // Đợi 10 giây để kết nối
   }
   Serial.println("WiFi connected");
-
   Serial.println("ESP32-CAM IP Address: ");
   Serial.println(WiFi.localIP());
 
+
   esp_err_t err = cam.init(esp32cam_aithinker_config);
-  if (err != ESP_OK)
-  {
+  if (err != ESP_OK) {
     Serial.printf("Camera init failed with error 0x%x", err);
     return;
   }
 
-  WiFi.setTxPower(WIFI_POWER_19_5dBm);  // Set maximum WiFi transmission power
-  rtspServer.begin();
 
-  // Set up a handler for the "/trigger_light" URL
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);  // Cài đặt truyền tải dữ liệu WIFI tối đa
+  rtspServer.begin(); // Khởi chạy rstp server
+  // Thiết lập 1 api endpoint "/trigger_light" để bật/tắt đèn
   webServer.on("/trigger_light", []() {
-    digitalWrite(lightPin, HIGH);  // Turn on the light
-    delay(500);                    // Keep it on for 500ms
-    digitalWrite(lightPin, LOW);    // Turn off the light
+    digitalWrite(lightPin, HIGH);  // Bật đèn
+    delay(500);                    // Giữ đèn bật trong 500ms
+    digitalWrite(lightPin, LOW);   // Tắt đèn
     webServer.send(200, "text/plain", "Light activated");
   });
-
-  webServer.begin();  // Start the web server
+  webServer.begin();  // Khởi chạy web server
 }
 
-CStreamer *streamer;
-CRtspSession *session;
-WiFiClient client; // FIXME, support multiple clients
 
-void loop()
-{
-  uint32_t msecPerFrame = 400; // Adjust frame rate to 2.5 FPS
+void loop() {
+  uint32_t msecPerFrame = 400; // Điều chỉnh tốc độ khung hình (2.5 FPS)
   static uint32_t lastimage = millis();
-  webServer.handleClient();  // Process web server requests
-
-  // If we have an active client connection, just service that until gone
-  // (FIXME - support multiple simultaneous clients)
-  if (session)
-  {
-    session->handleRequests(0); // we don't use a timeout here,
-    // instead we send only if we have new enough frames
-
+  webServer.handleClient();  // Xử lý các yêu cầu từ WebServer
+  // Nếu có kết nối RTSP client đang hoạt động
+  if (session) {
+    session->handleRequests(0); // Gửi khung hình (frame) mới
     uint32_t now = millis();
-    if (now > lastimage + msecPerFrame || now < lastimage)
-    { // handle clock rollover
-      session->broadcastCurrentFrame(now);
+    if (now > lastimage + msecPerFrame || now < lastimage) { 
+      session->broadcastCurrentFrame(now); // Phát khung hình hiện tại
       lastimage = now;
-
-      // check if we are overrunning our max frame rate
       now = millis();
       if (now > lastimage + msecPerFrame)
-        printf("warning exceeding max frame rate of %d ms\n", now - lastimage);
+        printf("warning exceeding max frame rate of %d ms\n", now - lastimage); // Cảnh báo nếu vượt quá tốc độ khung hình tối đa
     }
-
-    if (session->m_stopped)
-    {
+    if (session->m_stopped) { // Nếu kết nối RTSP bị ngừng
       delete session;
       delete streamer;
       session = NULL;
       streamer = NULL;
     }
-  }
-  else
-  {
+  } else {
     client = rtspServer.accept();
-
-    if (client)
-    {
-      //streamer = new SimStreamer(&client, true);             // our streamer for UDP/TCP based RTP transport
-      streamer = new OV2640Streamer(&client, cam); // our streamer for UDP/TCP based RTP transport
-
-      session = new CRtspSession(&client, streamer); // our threads RTSP session and state
+    if (client) {
+      streamer = new OV2640Streamer(&client, cam); // Tạo streamer cho kết nối
+      session = new CRtspSession(&client, streamer); // Tạo phiên RTSP
     }
   }
 }
+
