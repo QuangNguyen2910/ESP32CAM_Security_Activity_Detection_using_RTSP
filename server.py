@@ -491,13 +491,13 @@ if __name__ == "__main__":
     import uvicorn
     import asyncio
 
-    folder_path = 'familiar_faces'  # Replace with the path to your folder
-    print("Loading known faces...")
+    folder_path = 'familiar_faces'  # Thư mục chứa ảnh khuôn mặt
+    print("Đang tải ảnh khuôn mặt trong CSDL...")
 
-    # Create an event loop
+    # Tạo 1 event loop mới và chạy hàm async để tải ảnh khuôn mặt
     loop = asyncio.get_event_loop()
-    familiar_faces = loop.run_until_complete(load_known_faces(folder_path))  # Run the async function
-    print("Known faces loaded.")
+    familiar_faces = loop.run_until_complete(load_known_faces(folder_path))  # Chạy hàm async trong event loop
+    print("Tải ảnh khuôn mặt hoàn tất.")
 
-    # Start the FastAPI app
+    # Chạy ứng dụng FastAPI
     uvicorn.run(app, host="192.168.1.104", port=8000)
