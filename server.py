@@ -1,38 +1,34 @@
 import asyncio
 import httpx
-from typing import Dict
 import numpy as np
 import cv2
 from fastapi import FastAPI, WebSocket, Response
-from ultralytics import YOLO
-import io
 import time
 import onnxruntime as ort
 import torch
 import os
-from PIL import Image
 from facenet_pytorch import InceptionResnetV1
 from scipy.spatial.distance import cosine
 import base64
 
+# RTSP stream config
+ESP_IP = "192.168.1.102"  # Địa chỉ IP của ESP32
+ESP32_URL = f"http://{ESP_IP}/trigger_light"  # Endpoint để kích hoạt đèn
+RTSP_URL = f"rtsp://{ESP_IP}:5005/mjpeg/1"  # Luồng RTSP từ ESP32-CAM
 
-app = FastAPI()
-# Load the ONNX model
-onnx_session = ort.InferenceSession("best.onnx")
-# Initialize FaceNet for face embedding extraction
-inception_resnet = InceptionResnetV1(pretrained='vggface2').eval()
-# RTSP stream configuration
-ESP_IP = "192.168.1.103"  # Replace with your ESP32 IP
-ESP32_URL = f"http://{ESP_IP}/trigger_light"
-RTSP_URL = f"rtsp://{ESP_IP}:5005/mjpeg/1"
-vcap = cv2.VideoCapture(RTSP_URL, cv2.CAP_FFMPEG)
-# Buffer to hold the latest processed image
-frame_buffer = None
+app = FastAPI()  # Khởi tạo ứng dụng FastAPI
+
+
+onnx_session = ort.InferenceSession("best.onnx") # Tải mô hình YOLOv10 bản ONNX lên
+inception_resnet = InceptionResnetV1(pretrained='vggface2').eval() # Khởi tạo mô hình FaceNet pretrained để trích xuất đặc trưng từ khuôn mặt
+
+vcap = cv2.VideoCapture(RTSP_URL, cv2.CAP_FFMPEG) # Cấu hình luồng RTSP
+frame_buffer = None 
 familiar_faces = None
 unfamiliar_face = None 
-# Rate limiting for ESP32 light activation signal
-last_signal_time = 0
-SIGNAL_COOLDOWN = 10  # Increase the cooldown to 10 seconds
+
+last_signal_time = 0 # Thời gian gửi tín hiệu cuối cùng
+SIGNAL_COOLDOWN = 10  # Giới hạn khoảng thời gian giữa các tín hiệu bật đèn gửi tới ESP32
 
 
 # Preprocess image for ONNX model
