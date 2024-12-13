@@ -33,18 +33,7 @@ This repository contains the implementation of a security alarm system built usi
 2. Ensure the ESP32CAM is connected to a Wi-Fi network.
 
 ### Software Setup
-1. Clone the repository:
-   ```bash
-   git clone <repository_url>
-   cd <repository_name>
-   ```
-
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Start the FastAPI server:
+1. Start the FastAPI server:
    ```bash
    python server.py
    ```
