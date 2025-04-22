@@ -8,7 +8,9 @@
 
 // const char* ssid = "IEC Server";
 // const char* password = "IEC@2024";
-const char* ssid = "Interdimensional_Wifi";
+// const char* ssid = "Interdimensional_Wifi";
+// const char* password = "0974603489";
+const char* ssid = "Interdimensional_Wifi2";
 const char* password = "0974603489";
 
 WiFiServer rtspServer(5005); // Tạo rstp server tại port 80
